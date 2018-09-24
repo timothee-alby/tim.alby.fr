@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Title</title>
+    <meta charset="utf-8">
+    <style>
+      @import url(https://fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic);
+      @import url(https://fonts.googleapis.com/css?family=Ubuntu+Mono:400,700,400italic);
+
+      body {
+        font-family: 'Droid Serif';
+      }
+      h1, h2, h3 {
+        font-weight: 400;
+        margin-bottom: 0;
+      }
+      .remark-slide-content h1 { font-size: 3em; }
+      .remark-slide-content h2 { font-size: 2em; }
+      .remark-slide-content h3 { font-size: 1.6em; }
+      .footnote {
+        position: absolute;
+        bottom: 3em;
+      }
+      li p { line-height: 1.25em; }
+      .red { color: #fa0000; }
+      .large { font-size: 2em; }
+      a, a > code {
+        color: rgb(249, 38, 114);
+        text-decoration: none;
+      }
+      code {
+        background: #e7e8e2;
+        border-radius: 5px;
+      }
+      .remark-code, .remark-inline-code { font-family: 'Ubuntu Mono'; }
+      .remark-code-line-highlighted     { background-color: #373832; }
+      .pull-left {
+        float: left;
+        width: 47%;
+      }
+      .pull-right {
+        float: right;
+        width: 47%;
+      }
+      .pull-right ~ p {
+        clear: both;
+      }
+      #slideshow .slide .content code {
+        font-size: 0.8em;
+      }
+      #slideshow .slide .content pre code {
+        font-size: 0.9em;
+        padding: 15px;
+      }
+      .inverse {
+        background: #272822;
+        color: #777872;
+        text-shadow: 0 0 20px #333;
+      }
+      .inverse h1, .inverse h2 {
+        color: #f3f3f3;
+        line-height: 0.8em;
+      }
+      /* Slide-specific styling */
+      #slide-inverse .footnote {
+        bottom: 12px;
+        left: 20px;
+      }
+      #slide-how .slides {
+        font-size: 0.9em;
+        position: absolute;
+        top:  151px;
+        right: 140px;
+      }
+      #slide-how .slides h3 {
+        margin-top: 0.2em;
+      }
+      #slide-how .slides .first, #slide-how .slides .second {
+        padding: 1px 20px;
+        height: 90px;
+        width: 120px;
+        -moz-box-shadow: 0 0 10px #777;
+        -webkit-box-shadow: 0 0 10px #777;
+        box-shadow: 0 0 10px #777;
+      }
+      #slide-how .slides .first {
+        background: #fff;
+        position: absolute;
+        top: 20%;
+        left: 20%;
+        z-index: 1;
+      }
+      #slide-how .slides .second {
+        position: relative;
+        background: #fff;
+        z-index: 0;
+      }
+      /* Two-column layout */
+      .left-column {
+        color: #777;
+        width: 20%;
+        height: 92%;
+        float: left;
+      }
+      .left-column h2:last-of-type, .left-column h3:last-child {
+        color: #000;
+      }
+      .right-column {
+        width: 75%;
+        float: right;
+        padding-top: 1em;
+      }
+      blockquote {
+        border-left: 0.3em solid rgba(0,0,0,0.5);
+        padding: 0 15px;
+      }
+    </style>
+  </head>
+  <body>
+    <textarea id="source">
+
+class: center, middle
+
+# One Year of MongoDB
+
+### Tim Alby
+#### Show &amp; Tell &mdash; 2018-09-19
+
+---
+## Replication
+
+See Shane's talk: https://digital-science.slack.com/files/U6B3HUWFQ/FCWCYNRAQ/sk_mongodb-replication_2018-06-27.pdf
+
+---
+class: center, middle
+
+## Basics
+
+---
+
+### Shell
+
+```mongo
+$ mongo mongodb://127.0.0.1:27018/sharelatex
+> db.users.find(query, projection)
+> db.users.update(query, update, options)
+```
+
+###### Shell History
+
+```mongo
+cat ~/.dbshell
+```
+
+---
+
+### Querying
+
+The query is a JS object:
+
+- check equality with `{ attribute: value }`
+- advanced check with `{ attribute: Object }`
+  * (`Object` is a JS object with depth of one or more)
+- or sometimes `{ Operator: { attribute: value } }`
+
+###### Operators
+
+- `$ne`: `{ attribute: { $ne: value } }`
+- `$gt`: `{ attribute: { $gt: value } }`
+- `$in`: `{ attribute: { $in: [value1, value2] } }`
+- `$exists`: `{ attribute: { $exists: true } }`
+- `$or`: `{ $or: [{ attribute: value1 }, { attribute: value2 }] }`
+
+---
+
+### Pretty Output
+
+```
+> db.users.find(ObjectId("5b0587a016440c0102ec1ed8")).pretty()
+```
+
+```
+> db.users.findOne(ObjectId("5b0587a016440c0102ec1ed8"))
+```
+
+---
+class: center, middle
+
+## Pitfalls
+
+---
+
+### Update/Delete records
+
+###### Update Multiple records
+
+1. `db.test.update(query, update, { multi: true })`
+  * Default: `{ multi: false }`
+2. `db.test.updateMany(query, update)`
+
+###### Delete Multiple records
+
+1. `db.collection.remove(query, options)`
+  * Default: `{ justOne: false }`
+2. `db.collection.deleteMany(query, options)`
+
+###### Delete a single record
+
+1. `db.collection.remove(query, { justOne: true })`
+2. `db.collection.delete(query, options)`
+
+---
+
+### Array Size Range
+
+Size takes a number:
+
+```
+> db.users.findOne({ emails: { $size: 4 } })
+// OK
+```
+
+But not a range:
+
+```
+> db.users.findOne({ emails: { $size: { $gte: 4 } } })
+Error: error: {
+	"ok" : 0,
+	"errmsg" : "$size needs a number",
+	"code" : 2,
+	"codeName" : "BadValue"
+}
+```
+
+###### Workaround
+
+```
+> db.users.findOne({ 'emails.4': { $exists: true } })
+// OK
+```
+
+---
+
+### `findOne(null)`
+
+`db.users.findOne()` OR `db.users.findOne(null)`
+
+> The $natural parameter returns items according to their natural order within the database. This ordering is an internal implementation feature, and you should not rely on any particular structure within it.
+
+
+---
+class: center, middle
+
+## Indexes
+
+---
+
+### Nulls
+
+By default, index are indexing documents event if the attribute is null or nonexistent. Problems:
+
+1. waste of space and memory
+2. uniqueness
+
+---
+
+### Nulls
+
+```
+> db.tests.createIndex(
+	{ one: 1 },
+	{
+		name: 'tests_index',
+		unique: true
+	}
+)
+> db.tests.insert({one: 1})
+> db.tests.insert({one: 1})
+WriteResult({
+	"nInserted" : 0,
+	"writeError" : {
+		"code" : 11000,
+		"errmsg" : "E11000 duplicate key error collection: sharelatex.tests index: tests_index dup key: { : 1.0 }"
+	}
+})
+> db.tests.insert({two: 2})
+> db.tests.insert({two: 2})
+WriteResult({
+	"nInserted" : 0,
+	"writeError" : {
+		"code" : 11000,
+		"errmsg" : "E11000 duplicate key error collection: sharelatex.tests index: tests_index dup key: { : null }"
+	}
+})
+```
+
+*Solution:* Partial and sparse indexes
+
+---
+
+### Partial Indexes
+
+```
+> db.tests.createIndex(
+	{ one: 1 },
+	{
+		name: 'tests_index_partial',
+		unique: true,
+		partialFilterExpression: {
+			'one': { $exists: true }
+		}
+	}
+)
+> db.tests.insert({one: 1})
+> db.tests.insert({one: 1})
+WriteResult({
+	"nInserted" : 0,
+	"writeError" : {
+		"code" : 11000,
+		"errmsg" : "E11000 duplicate key error collection: sharelatex.tests index: tests_index_partial dup key: { : 1.0 }"
+	}
+})
+> db.tests.insert({two: 2})
+> db.tests.insert({two: 2})
+// OK
+```
+
+---
+
+### Partial Indexes
+
+:warning:
+> To use the partial index, a query must contain the filter expression (or a modified filter expression that specifies a subset of the filter expression) as part of its query condition.
+
+(see https://github.com/sharelatex/web-sharelatex-internal/issues/633)
+
+---
+
+### Sparse Indexes
+
+A subset of partial indexes
+
+```
+> db.tests.createIndex(
+	{ one: 1 },
+	{
+		name: 'tests_index_sparse',
+		unique: true,
+		sparse: true
+	}
+)
+> db.tests.insert({one: 1})
+> db.tests.insert({one: 1})
+WriteResult({
+	"nInserted" : 0,
+	"writeError" : {
+		"code" : 11000,
+		"errmsg" : "E11000 duplicate key error collection: sharelatex.tests index: tests_index_sparse dup key: { : 1.0 }"
+	}
+})
+> db.tests.insert({two: 2})
+> db.tests.insert({two: 2})
+// OK
+```
+
+---
+class: center, middle
+
+### Explain
+
+---
+
+#### `.explain()`
+
+```
+> db.tests.find({one: 1}).explain()
+{
+	"queryPlanner" : {
+		"plannerVersion" : 1,
+		"namespace" : "sharelatex.tests",
+		"indexFilterSet" : false,
+		"parsedQuery" : {
+			"one" : {
+				"$eq" : 1
+			}
+		},
+		"winningPlan" : {
+		  // See next page
+		},
+		"rejectedPlans" : [ ]
+	},
+	"serverInfo" : {
+		// ...
+	},
+	"ok" : 1
+}
+```
+
+---
+
+#### `.explain()`
+
+```
+"winningPlan" : {
+  "stage" : "FETCH",
+  "inputStage" : {
+    "stage" : "IXSCAN",
+    "keyPattern" : {
+      "one" : 1
+    },
+    "indexName" : "tests_index_sparse",
+    "isMultiKey" : false,
+    "multiKeyPaths" : {
+      "one" : [ ]
+    },
+    "isUnique" : true,
+    "isSparse" : true,
+    "isPartial" : false,
+    "indexVersion" : 2,
+    "direction" : "forward",
+    "indexBounds" : {
+      "one" : [
+        "[1.0, 1.0]"
+      ]
+    }
+  }
+}
+```
+
+---
+
+#### `.explain("executionStats")`
+
+```
+> db.tests.find({one: 1}).explain("executionStats")
+{
+	"queryPlanner" : {
+		"plannerVersion" : 1,
+		"namespace" : "sharelatex.tests",
+		"indexFilterSet" : false,
+		"parsedQuery" : {
+			"one" : {
+				"$eq" : 1
+			}
+		},
+		"winningPlan" : {
+			// ...
+		},
+		"rejectedPlans" : [ ]
+	},
+	"executionStats" : {
+    // See next page
+	},
+	"serverInfo" : {
+			// ...
+	},
+	"ok" : 1
+}
+```
+
+
+---
+
+#### `.explain("executionStats")`
+
+```
+"executionStats" : {
+  "executionSuccess" : true,
+  "nReturned" : 1,
+  "executionTimeMillis" : 0,
+  "totalKeysExamined" : 1,
+  "totalDocsExamined" : 1,
+  "executionStages" : {
+    "stage" : "FETCH",
+    "nReturned" : 1,
+    "executionTimeMillisEstimate" : 0,
+    "works" : 2,
+    "advanced" : 1,
+    "needTime" : 0,
+    "needYield" : 0,
+    "saveState" : 0,
+    "restoreState" : 0,
+    "isEOF" : 1,
+    "invalidates" : 0,
+    "docsExamined" : 1,
+    "alreadyHasObj" : 0,
+    "inputStage" : {
+      "stage" : "IXSCAN",
+      "nReturned" : 1,
+      "executionTimeMillisEstimate" : 0,
+      "works" : 2,
+      "advanced" : 1,
+      "needTime" : 0,
+      "needYield" : 0,
+      "saveState" : 0,
+      "restoreState" : 0,
+      "isEOF" : 1,
+      "invalidates" : 0,
+      "keyPattern" : {
+        "one" : 1
+      },
+      "indexName" : "tests_index_sparse",
+      "isMultiKey" : false,
+      "multiKeyPaths" : {
+        "one" : [ ]
+      },
+      "isUnique" : true,
+      "isSparse" : true,
+      "isPartial" : false,
+      "indexVersion" : 2,
+      "direction" : "forward",
+      "indexBounds" : {
+        "one" : [
+          "[1.0, 1.0]"
+        ]
+      },
+      "keysExamined" : 1,
+      "seeks" : 1,
+      "dupsTested" : 0,
+      "dupsDropped" : 0,
+      "seenInvalidated" : 0
+    }
+  }
+}
+```
+
+---
+class: center, middle
+
+## Collations
+
+---
+
+### Definition
+
+For case-insensitive indexes or queries.
+
+> Collation allows users to specify language-specific rules for string comparison, such as rules for lettercase and accent marks.
+
+###### Using Collations
+
+```
+db.users.createIndex(
+	{ email: 1 },
+	{
+		name: "email_case_insensitive",
+		collation: {
+			locale: "en",
+			strength: 2
+		},
+		unique: true,
+		background: true
+	}
+)
+```
+
+---
+
+### Strength levels
+
+| Value                                                                                                                                                                                                                                                                                                                                                                                                                             | Description
+|---|---|
+| 1                                                                                                                                                                                                                                                                                                                                                                                                                                 | Primary level of comparison. Collation performs comparisons of the base characters only, ignoring other differences such as diacritics and case.                                                                                                                                                                         |
+| 2                                                                                                                                                                                                                                                                                                                                                                                                                                 | Secondary level of comparison. Collation performs comparisons up to secondary differences, such as diacritics. That is, collation performs comparisons of base characters (primary differences) and diacritics (secondary differences). Differences between base characters takes precedence over secondary differences.                                                                                                                                                                         |
+| 3                                                                                                                                                                                                                                                                                                                                                                                                                                 | Tertiary level of comparison. Collation performs comparisons up to tertiary differences, such as case and letter variants. That is, collation performs comparisons of base characters (primary differences), diacritics (secondary differences), and case and variants (tertiary differences). Differences between base characters takes precedence over secondary differences, which takes precedence over tertiary differences. **This is the default level.**                                                                                                                                                                                                                                                                                                                          |
+| 4                                                                                                                                                                                                                                                                                                                                                                                                                                 | Quaternary Level. Limited for specific use case to consider punctuation when levels 1-3 ignore punctuation or for processing Japanese text.                                                                                                                                                                              |
+| 5                                                                                                                                                                                                                                                                                                                                                                                                                                 | Identical Level. Limited for specific use case of tie breaker.                                                                                                                                                                                                                                                           |
+
+
+---
+
+### Strength levels
+
+:warning:
+> You must specify the same collation at the query level in order to use the index-level collation.
+
+*Possible solution:* use one index with collation for uniqueness constraint and another for querying.
+
+---
+class: center, middle
+
+## Aggregates
+
+> Only a Postgres developer would try that!
+
+
+---
+
+### Definition
+
+```
+ db.collection.aggregate(pipeline, options)
+```
+
+- `pipeline` is an Array of 'stages': `[ { <stage> }, ... ]`
+- `stage` is an Object with one key: the stage name. Its value describes the stage.
+
+---
+
+### Stages
+
+- `{ $addFields: { <newField>: <expression>, ... } }`
+  * Pass a document to the next stage after adding some attributes
+- `{ $project: { <specification(s)> } }`
+  * Similar to `$addFields` but only pass the specified attributes to the next stage
+- `{ $match: { <query> } }`
+  * Filter the documents. Pass matching documents to the next stage
+- `{ $lookup: { from: <collection to join>, localField: <field from the input documents>, foreignField: <field from the documents of the "from" collection>, as: <output array field> } }`
+  * Joins!
+
+---
+
+### Example
+
+```
+function userAggregate() {
+  return db.users.aggregate([
+    { // STAGE 1
+      $addFields: { lowercaseEmail: { $toLower: "$email" }, isLowercase: { $eq: ["$email", { $toLower: "$email" }] } }
+    },
+    { // STAGE 2
+      $match: { isLowercase: false }
+    },
+    { // STAGE 3
+      $lookup: { from: "users", localField: "lowercaseEmail", foreignField: "email", as: 'usersLookup' }
+    },
+    { // STAGE 4
+      $addFields: { isDuplicate: { $gt: [{ $size: "$usersLookup" }, 0] } }
+    },
+    { // STAGE 5
+      $project: { "_id": 1, email: 1, newEmail: { $cond: { if: "$isDuplicate", then: { $concat: ['downcased___', "$lowercaseEmail"] }, else: "$lowercaseEmail" } } }
+    }
+  ])
+}
+```
+
+*Tip:* To complex queries within the Mongo shell, on can define functions, editable with the default text editor:
+
+```
+edit usersAggregate
+usersAggregate()
+```
+
+
+---
+
+### Example -- Stage 1
+
+```
+{ // STAGE 1
+  $addFields:
+  {
+    lowercaseEmail: { $toLower: "$email" },
+    isLowercase: {
+      $eq: ["$email", { $toLower: "$email" }]
+    }
+  }
+}
+```
+
+---
+
+### Example -- Stage 2
+
+```
+{ // STAGE 2
+  $match:
+  {
+    isLowercase: false
+  }
+}
+```
+
+---
+
+### Example -- Stage 3
+
+```
+{ // STAGE 3
+  $lookup:
+  {
+    from: "users",
+    localField: "lowercaseEmail",
+    foreignField: "email",
+    as: 'usersLookup'
+  }
+}
+```
+
+---
+
+### Example -- Stage 4
+
+```
+{ // STAGE 4
+  $addFields:
+  {
+    isDuplicate: {
+      $gt: [{ $size: "$usersLookup" }, 0]
+    }
+  }
+}
+```
+
+---
+
+### Example -- Stage 5
+
+```
+{ // STAGE 5
+  $project:
+  {
+    "_id": 1,
+    email: 1,
+    newEmail: {
+      $cond: {
+        if: "$isDuplicate",
+        then: {
+          $concat: ['downcased___', "$lowercaseEmail"]
+        },
+        else: "$lowercaseEmail"
+      }
+    }
+  }
+}
+```
+
+---
+
+### Example
+
+```
+{ "_id" : ObjectId("..."), "email" : "tim@ALBY.fr", "newEmail" : "tim@alby.fr" }
+{ "_id" : ObjectId("..."), "email" : "tim.ALBY@gmail.com", "newEmail" : "downcased___tim.alby@gmail.com" }
+```
+
+---
+class: center, middle
+
+# Questions?
+
+    </textarea>
+    <script src="https://remarkjs.com/downloads/remark-latest.min.js">
+    </script>
+    <script>
+      var slideshow = remark.create({
+       highlightLanguage: 'mongo',
+        navigation: {
+          scroll: false,
+        },
+      });
+    </script>
+  </body>
+</html>
